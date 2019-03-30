@@ -4,8 +4,8 @@
 # In[1]:
 
 
-#import sys
-#!{sys.executable} -m pip install numpy
+# import sys
+# !{sys.executable} -m pip install sklearn-pandas
 
 import numpy as np
 import pandas as pd
@@ -42,8 +42,8 @@ from sklearn.model_selection import GridSearchCV
 # In[2]:
 
 
-train_data = pd.read_csv("train.csv")
-test_data = pd.read_csv("test.csv")
+train_data = pd.read_csv(r"C:\Naudé\University\Advanced Data Analytics\ADA874\Kaggle Competition\Titanic\train.csv", engine='python')
+test_data = pd.read_csv(r"C:\Naudé\University\Advanced Data Analytics\ADA874\Kaggle Competition\Titanic\test.csv", engine='python')
 
 
 # In[3]:
@@ -200,13 +200,19 @@ dtr_score.mean()
 
 
 y_pred = titanic_svm.predict(x_test)
-y_pred
+len(y_pred)
 
 
 # In[24]:
 
+submission = test_data["PassengerId"]
+submission = pd.concat([submission, pd.DataFrame(y_pred)], axis=1)
+submission.columns = ["PassengerId",  "Survived"]
 
-pd.DataFrame(y_pred).to_csv(r"C:\Users\19673418\Desktop")
+# In[25]:
+
+
+submission.to_csv(r"C:\Naudé\University\Advanced Data Analytics\ADA874\Kaggle Competition\Titanic\submission.csv", index = False)
 
 
 # In[ ]:
