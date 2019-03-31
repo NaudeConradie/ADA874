@@ -10,6 +10,11 @@
 import numpy as np
 import pandas as pd
 import os
+import re
+
+get_ipython().run_line_magic('matplotlib', 'inline')
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 
 from scipy.stats import randint
 
@@ -68,17 +73,25 @@ medianAge
 # In[6]:
 
 
-num_attribs = ["Age", "SibSp", "Parch", "Fare"]
-cat_attribs = ["Pclass", "Sex", "Embarked"]
+ticket_text = re.findall(r"(?i)\b[a-z]+\b", train_data["Ticket"].to_string())
+ticket_textset = set(ticket_text)
+ticket_textset
 
 
 # In[7]:
 
 
-j_SibSp, j_Parch = [list(num_attribs).index(col) for col in ("SibSp", "Parch")]
+num_attribs = ["Pclass", "Age", "SibSp", "Parch", "Fare"]
+cat_attribs = ["Sex", "Embarked"]
 
 
 # In[8]:
+
+
+j_SibSp, j_Parch = [list(num_attribs).index(col) for col in ("SibSp", "Parch")]
+
+
+# In[9]:
 
 
 class DataFrameSelector(BaseEstimator, TransformerMixin):
@@ -90,7 +103,7 @@ class DataFrameSelector(BaseEstimator, TransformerMixin):
         return X[self.attribute_names].values
 
 
-# In[9]:
+# In[10]:
 
 
 class CombinedAttributesAdder(BaseEstimator, TransformerMixin):
@@ -104,15 +117,15 @@ class CombinedAttributesAdder(BaseEstimator, TransformerMixin):
             return np.c_[X, Relatives]
 
 
-# In[10]:
+# In[11]:
 
 
 fancy_title_list = ["Sir.", "Lady.", "Count.", "Countess.", "Duke.", "Duchess.", "M.", "Mlle.", "\""]
-female_title_list = ["Miss.", "Mrs."]
+female_title_list = ["Miss.", "Mrs.", "Lady.", "Countess.", "Duchess.", "Mlle."]
 child_title_list = ["Master."]
 
 
-# In[11]:
+# In[12]:
 
 
 def find_string(X, string_list):
@@ -125,7 +138,7 @@ def find_string(X, string_list):
     return found_strings
 
 
-# In[12]:
+# In[13]:
 
 
 class StringFinder(BaseEstimator, TransformerMixin):
@@ -141,7 +154,7 @@ class StringFinder(BaseEstimator, TransformerMixin):
             return np.c_[FancyTitle, FemaleTitle, ChildTitle]
 
 
-# In[13]:
+# In[14]:
 
 
 num_pipeline = Pipeline([
@@ -152,7 +165,7 @@ num_pipeline = Pipeline([
     ])
 
 
-# In[14]:
+# In[15]:
 
 
 cat_pipeline = Pipeline([
@@ -162,7 +175,7 @@ cat_pipeline = Pipeline([
     ])
 
 
-# In[15]:
+# In[16]:
 
 
 str_pipeline = Pipeline([
@@ -171,7 +184,7 @@ str_pipeline = Pipeline([
     ])
 
 
-# In[16]:
+# In[17]:
 
 
 pre_pipeline = FeatureUnion(transformer_list=[
@@ -181,83 +194,89 @@ pre_pipeline = FeatureUnion(transformer_list=[
     ])
 
 
-# In[17]:
+# In[18]:
 
 
 x_train = pre_pipeline.fit_transform(train_data)
 x_test = pre_pipeline.fit_transform(test_data)
 
 
-# In[18]:
+# In[19]:
 
 
 y_train = train_data["Survived"]
 
 
-# In[19]:
+# In[20]:
 
 
 titanic_dtr = DecisionTreeRegressor(random_state = 42)
 titanic_dtr.fit(x_train, y_train)
 
 
-# In[20]:
+# In[21]:
 
 
 dtr_score = cross_val_score(titanic_dtr, x_train, y_train, cv = 10)
 dtr_score.mean()
 
 
-# In[21]:
+# In[22]:
 
 
 titanic_rfg = RandomForestRegressor(n_estimators = 100, random_state = 42)
 titanic_rfg.fit(x_train, y_train)
 
 
-# In[22]:
+# In[23]:
 
 
 rfg_score = cross_val_score(titanic_rfg, x_train, y_train, cv = 10)
 rfg_score.mean()
 
 
-# In[23]:
+# In[24]:
 
 
 titanic_lr = LinearRegression()
 titanic_lr.fit(x_train, y_train)
 
 
-# In[24]:
+# In[25]:
 
 
 lr_score = cross_val_score(titanic_lr, x_train, y_train, cv = 10)
 lr_score.mean()
 
 
-# In[25]:
+# In[26]:
 
 
 titanic_rfc = RandomForestClassifier(n_estimators = 100, random_state = 42)
 titanic_rfc.fit(x_train, y_train)
 
 
-# In[26]:
+# In[27]:
 
 
 rfc_score = cross_val_score(titanic_rfc, x_train, y_train, cv = 10)
 rfc_score.mean()
 
 
-# In[27]:
+# In[28]:
+
+
+og_rfc_score = rfc_score.mean()
+
+
+# In[29]:
 
 
 y_pred_rfc = titanic_rfc.predict(x_test)
 len(y_pred_rfc)
 
 
-# In[28]:
+# In[30]:
 
 
 submission = test_data["PassengerId"]
@@ -265,13 +284,13 @@ submission = pd.concat([submission, pd.DataFrame(y_pred_rfc)], axis=1)
 submission.columns = ["PassengerId",  "Survived"]
 
 
-# In[29]:
+# In[31]:
 
 
 submission.to_csv("submissionRFC.csv", index = False)
 
 
-# In[30]:
+# In[32]:
 
 
 param_grid = [
@@ -283,25 +302,25 @@ titanic_rfc = RandomForestClassifier(random_state = 42)
 grid_search = GridSearchCV(titanic_rfc, param_grid, cv = 5, scoring = 'neg_mean_squared_error')
 
 
-# In[31]:
+# In[33]:
 
 
 grid_search.fit(x_train, y_train)
 
 
-# In[32]:
+# In[34]:
 
 
 grid_search.best_params_
 
 
-# In[33]:
+# In[35]:
 
 
 grid_search.best_estimator_
 
 
-# In[34]:
+# In[36]:
 
 
 param_distrib = {'n_estimators': randint(low=1, high=1000), 'max_features': randint(low=1, high=8)}
@@ -310,46 +329,52 @@ titanic_rfc = RandomForestClassifier(random_state = 42)
 random_search = RandomizedSearchCV(titanic_rfc, param_distributions = param_distrib, n_iter = 30, cv = 5, scoring = 'neg_mean_squared_error', random_state = 42)
 
 
-# In[35]:
+# In[37]:
 
 
 random_search.fit(x_train, y_train)
 
 
-# In[36]:
+# In[38]:
 
 
 random_search.best_params_
 
 
-# In[37]:
+# In[39]:
 
 
 random_search.best_estimator_
 
 
-# In[38]:
+# In[40]:
 
 
-titanic_rfc = RandomForestClassifier(max_features = 7, n_estimators = 21, random_state = 42)
+titanic_rfc = RandomForestClassifier(max_features = 7, n_estimators = 436, random_state = 42)
 titanic_rfc.fit(x_train, y_train)
 
 
-# In[39]:
+# In[41]:
 
 
 rfc_score = cross_val_score(titanic_rfc, x_train, y_train, cv = 10)
 rfc_score.mean()
 
 
-# In[40]:
+# In[42]:
+
+
+new_rfc_score = rfc_score.mean()
+
+
+# In[43]:
 
 
 y_pred_rfc = titanic_rfc.predict(x_test)
 len(y_pred_rfc)
 
 
-# In[41]:
+# In[44]:
 
 
 submission = test_data["PassengerId"]
@@ -357,96 +382,40 @@ submission = pd.concat([submission, pd.DataFrame(y_pred_rfc)], axis=1)
 submission.columns = ["PassengerId",  "Survived"]
 
 
-# In[42]:
+# In[45]:
 
 
 submission.to_csv("submissionRFC_impr.csv", index = False)
 
 
-# In[43]:
+# In[46]:
 
 
 titanic_svm = SVC(gamma = "auto")
 titanic_svm.fit(x_train, y_train)
 
 
-# In[44]:
+# In[47]:
 
 
 svm_score = cross_val_score(titanic_svm, x_train, y_train, cv = 10)
 svm_score.mean()
-
-
-# In[45]:
-
-
-y_pred_svm = titanic_svm.predict(x_test)
-len(y_pred_svm)
-
-
-# In[46]:
-
-
-submission = test_data["PassengerId"]
-submission = pd.concat([submission, pd.DataFrame(y_pred_svm)], axis=1)
-submission.columns = ["PassengerId",  "Survived"]
-
-
-# In[47]:
-
-
-submission.to_csv("submissionSVM.csv", index = False)
 
 
 # In[48]:
 
 
-param_grid = {'C': [5, 10, 15], 'gamma': [0.01, 0.02, 0.03]}
-
-titanic_svm = SVC()
-grid_search = GridSearchCV(titanic_svm, param_grid, cv = 5, scoring = 'neg_mean_squared_error')
+og_svm_score = svm_score.mean()
 
 
 # In[49]:
-
-
-grid_search.fit(x_train, y_train)
-
-
-# In[50]:
-
-
-grid_search.best_params_
-
-
-# In[51]:
-
-
-grid_search.best_estimator_
-
-
-# In[52]:
-
-
-titanic_svm = SVC(C = 10, gamma = 0.02)
-titanic_svm.fit(x_train, y_train)
-
-
-# In[53]:
-
-
-svm_score = cross_val_score(titanic_svm, x_train, y_train, cv = 10)
-svm_score.mean()
-
-
-# In[54]:
 
 
 y_pred_svm = titanic_svm.predict(x_test)
 len(y_pred_svm)
 
 
-# In[55]:
+# In[50]:
 
 
 submission = test_data["PassengerId"]
@@ -454,10 +423,116 @@ submission = pd.concat([submission, pd.DataFrame(y_pred_svm)], axis=1)
 submission.columns = ["PassengerId",  "Survived"]
 
 
+# In[51]:
+
+
+submission.to_csv("submissionSVM.csv", index = False)
+
+
+# In[52]:
+
+
+param_grid = {'C': [10, 15, 20], 'gamma': [0.01, 0.02, 0.03]}
+
+titanic_svm = SVC()
+grid_search = GridSearchCV(titanic_svm, param_grid, cv = 5, scoring = 'neg_mean_squared_error')
+
+
+# In[53]:
+
+
+grid_search.fit(x_train, y_train)
+
+
+# In[54]:
+
+
+grid_search.best_params_
+
+
+# In[55]:
+
+
+grid_search.best_estimator_
+
+
 # In[56]:
 
 
+titanic_svm = SVC(C = 15, gamma = 0.02)
+titanic_svm.fit(x_train, y_train)
+
+
+# In[57]:
+
+
+svm_score = cross_val_score(titanic_svm, x_train, y_train, cv = 10)
+svm_score.mean()
+
+
+# In[58]:
+
+
+new_svm_score = svm_score.mean()
+
+
+# In[59]:
+
+
+y_pred_svm = titanic_svm.predict(x_test)
+len(y_pred_svm)
+
+
+# In[60]:
+
+
+submission = test_data["PassengerId"]
+submission = pd.concat([submission, pd.DataFrame(y_pred_svm)], axis=1)
+submission.columns = ["PassengerId",  "Survived"]
+
+
+# In[61]:
+
+
 submission.to_csv("submissionSVM_impr.csv", index = False)
+
+
+# In[62]:
+
+
+PROJECT_ROOT_DIR = r"C:\Users\19673418\Desktop\Repository\ADA874\Kaggle Competition\Titanic"
+CHAPTER_ID = "Titanic"
+
+def save_fig(fig_id, tight_layout=True):
+    path = os.path.join(PROJECT_ROOT_DIR, fig_id + ".png")
+    print("Saving figure", fig_id)
+    if tight_layout:
+        plt.tight_layout()
+    plt.savefig(path, format='png', dpi=300)
+
+
+# In[63]:
+
+
+models = ["Decision Tree Regressor", "Random Forest Regressor", "Linear Regression", "Random Forest Classifier", "Improved Random Forest Classifier", "Support Vector Machine", "Improved Support Vector Machine"]
+model_pos = np.arange(len(models))
+model_acc = [dtr_score.mean(), rfg_score.mean(), lr_score.mean(), og_rfc_score, new_rfc_score, og_svm_score, new_svm_score]
+model_per = [x*100 for x in model_acc]
+model_per
+
+
+# In[64]:
+
+
+plt.figure(figsize=(10, 5))
+plt.barh(model_pos, model_per, align = 'center', alpha = 0.5)
+plt.yticks(model_pos, models)
+plt.xlabel('Accuracy (%)')
+plt.title('Model Accuracies')
+axes = plt.gca()
+axes.set_xlim([0, 100])
+save_fig("Model Accuracies")
+plt.show
 
 
 # In[ ]:
