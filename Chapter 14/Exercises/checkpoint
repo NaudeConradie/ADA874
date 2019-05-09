@@ -1,0 +1,2 @@
+model_checkpoint_path: "Reber_classifier"
+all_model_checkpoint_paths: "Reber_classifier"
